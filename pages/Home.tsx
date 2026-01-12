@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Loader2 } from 'lucide-react';
 import Hero3D from '../components/Hero3D';
-import { getFeaturedProjects } from '../services/mockData';
+import { getFeaturedProjects } from '../services/api';
+import { Project } from '../types';
 
 const TypewriterText: React.FC<{ text: string }> = ({ text }) => {
   const [displayText, setDisplayText] = useState('');
@@ -29,10 +30,20 @@ const TypewriterText: React.FC<{ text: string }> = ({ text }) => {
 };
 
 const Home: React.FC = () => {
-  const featuredProjects = getFeaturedProjects();
+  const [featuredProjects, setFeaturedProjects] = useState<Project[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const { scrollYProgress } = useScroll();
   const opacity = useTransform(scrollYProgress, [0, 0.2], [1, 0]);
   const y = useTransform(scrollYProgress, [0, 0.2], [0, 50]);
+
+  useEffect(() => {
+    const fetchProjects = async () => {
+      const data = await getFeaturedProjects();
+      setFeaturedProjects(data);
+      setIsLoading(false);
+    };
+    fetchProjects();
+  }, []);
 
   return (
     <main className="w-full">
@@ -100,39 +111,46 @@ const Home: React.FC = () => {
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-            {featuredProjects.map((project, index) => (
-              <motion.div
-                key={project.id}
-                initial={{ opacity: 0, y: 50 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: index * 0.2 }}
-                viewport={{ once: true }}
-                className={`group cursor-pointer ${index % 2 === 1 ? 'md:mt-24' : ''}`}
-              >
-                <Link to={`/work/${project.slug}`}>
-                  <div className="overflow-hidden rounded-lg mb-6 shadow-lg">
-                    <img 
-                      src={project.cover_image} 
-                      alt={project.title} 
-                      className="w-full h-[400px] object-cover transform group-hover:scale-105 transition-transform duration-700 ease-in-out grayscale group-hover:grayscale-0"
-                    />
-                  </div>
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="text-2xl font-bold text-ink group-hover:text-cinnabar transition-colors mb-2">
-                        {project.title}
-                      </h3>
-                      <p className="text-ink/60 text-sm">{project.category}</p>
+          {isLoading ? (
+             <div className="flex justify-center py-20">
+               <Loader2 className="animate-spin text-ink/30" size={32} />
+             </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+              {featuredProjects.map((project, index) => (
+                <motion.div
+                  key={project.id}
+                  initial={{ opacity: 0, y: 50 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: index * 0.2 }}
+                  viewport={{ once: true }}
+                  className={`group cursor-pointer ${index % 2 === 1 ? 'md:mt-24' : ''}`}
+                >
+                  <Link to={`/work/${project.slug}`}>
+                    <div className="overflow-hidden rounded-lg mb-6 shadow-lg bg-gray-200 h-[400px]">
+                      <img 
+                        src={project.cover_image} 
+                        alt={project.title} 
+                        loading="lazy"
+                        className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700 ease-in-out grayscale group-hover:grayscale-0"
+                      />
                     </div>
-                    <span className="text-xs border border-ink/20 px-2 py-1 rounded-full text-ink/60">
-                      {project.publish_date.split('-')[0]}
-                    </span>
-                  </div>
-                </Link>
-              </motion.div>
-            ))}
-          </div>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="text-2xl font-bold text-ink group-hover:text-cinnabar transition-colors mb-2">
+                          {project.title}
+                        </h3>
+                        <p className="text-ink/60 text-sm">{project.category}</p>
+                      </div>
+                      <span className="text-xs border border-ink/20 px-2 py-1 rounded-full text-ink/60">
+                        {project.publish_date}
+                      </span>
+                    </div>
+                  </Link>
+                </motion.div>
+              ))}
+            </div>
+          )}
         </div>
       </section>
     </main>

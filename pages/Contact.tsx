@@ -1,17 +1,38 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Send, MapPin, Mail } from 'lucide-react';
+import { Send, MapPin, Mail, Loader2 } from 'lucide-react';
+import { submitInquiry } from '../services/api';
+import { InquiryForm } from '../types';
 
 const Contact: React.FC = () => {
-  const [formStatus, setFormStatus] = useState<'idle' | 'submitting' | 'success'>('idle');
+  const [formStatus, setFormStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
+  const [formData, setFormData] = useState<InquiryForm>({
+    name: '',
+    contact_info: '',
+    type: 'Business',
+    message: ''
+  });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormStatus('submitting');
-    // Simulate API call
-    setTimeout(() => {
+    
+    const success = await submitInquiry(formData);
+    
+    if (success) {
       setFormStatus('success');
-    }, 1500);
+      // Reset form
+      setFormData({ name: '', contact_info: '', type: 'Business', message: '' });
+    } else {
+      setFormStatus('error');
+    }
   };
 
   return (
@@ -72,35 +93,71 @@ const Contact: React.FC = () => {
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
                 <label className="block text-sm font-bold uppercase tracking-wider mb-2">Name</label>
-                <input required type="text" className="w-full bg-paper border-b-2 border-ink/20 p-3 focus:outline-none focus:border-cinnabar transition-colors" placeholder="John Doe" />
+                <input 
+                  required 
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  type="text" 
+                  className="w-full bg-paper border-b-2 border-ink/20 p-3 focus:outline-none focus:border-cinnabar transition-colors" 
+                  placeholder="John Doe" 
+                />
               </div>
               
               <div>
-                <label className="block text-sm font-bold uppercase tracking-wider mb-2">Email</label>
-                <input required type="email" className="w-full bg-paper border-b-2 border-ink/20 p-3 focus:outline-none focus:border-cinnabar transition-colors" placeholder="john@example.com" />
+                <label className="block text-sm font-bold uppercase tracking-wider mb-2">Contact Info (Email/Phone)</label>
+                <input 
+                  required 
+                  name="contact_info"
+                  value={formData.contact_info}
+                  onChange={handleChange}
+                  type="text" 
+                  className="w-full bg-paper border-b-2 border-ink/20 p-3 focus:outline-none focus:border-cinnabar transition-colors" 
+                  placeholder="john@example.com" 
+                />
               </div>
 
               <div>
                 <label className="block text-sm font-bold uppercase tracking-wider mb-2">Inquiry Type</label>
-                <select className="w-full bg-paper border-b-2 border-ink/20 p-3 focus:outline-none focus:border-cinnabar transition-colors">
-                  <option>Business</option>
-                  <option>Career</option>
-                  <option>Other</option>
+                <select 
+                  name="type"
+                  value={formData.type}
+                  onChange={handleChange}
+                  className="w-full bg-paper border-b-2 border-ink/20 p-3 focus:outline-none focus:border-cinnabar transition-colors"
+                >
+                  <option value="Business">Business</option>
+                  <option value="Career">Career</option>
+                  <option value="Other">Other</option>
                 </select>
               </div>
 
               <div>
                 <label className="block text-sm font-bold uppercase tracking-wider mb-2">Message</label>
-                <textarea required rows={5} className="w-full bg-paper border-b-2 border-ink/20 p-3 focus:outline-none focus:border-cinnabar transition-colors" placeholder="Tell us about your project..."></textarea>
+                <textarea 
+                  required 
+                  name="message"
+                  value={formData.message}
+                  onChange={handleChange}
+                  rows={5} 
+                  className="w-full bg-paper border-b-2 border-ink/20 p-3 focus:outline-none focus:border-cinnabar transition-colors" 
+                  placeholder="Tell us about your project..."
+                ></textarea>
               </div>
+
+              {formStatus === 'error' && (
+                <p className="text-cinnabar text-sm">Something went wrong. Please try again.</p>
+              )}
 
               <button 
                 type="submit" 
                 disabled={formStatus === 'submitting'}
                 className="w-full bg-ink text-paper py-4 mt-4 font-bold tracking-widest hover:bg-cinnabar transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
               >
-                {formStatus === 'submitting' ? 'SENDING...' : 'SEND MESSAGE'}
-                <Send size={18} />
+                {formStatus === 'submitting' ? (
+                  <>SENDING... <Loader2 className="animate-spin" size={18} /></>
+                ) : (
+                  <>SEND MESSAGE <Send size={18} /></>
+                )}
               </button>
             </form>
           )}

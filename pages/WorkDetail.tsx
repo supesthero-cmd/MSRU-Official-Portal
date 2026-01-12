@@ -1,15 +1,46 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft } from 'lucide-react';
-import { getProjectBySlug, getFeaturedProjects } from '../services/mockData';
+import { ArrowLeft, Loader2 } from 'lucide-react';
+import { getProjectBySlug, getFeaturedProjects } from '../services/api';
+import { Project } from '../types';
 
 const WorkDetail: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
-  const project = getProjectBySlug(slug || '');
-  const relatedProjects = getFeaturedProjects().filter(p => p.id !== project?.id).slice(0, 2);
+  const [project, setProject] = useState<Project | null | undefined>(null); // null = loading, undefined = not found
+  const [relatedProjects, setRelatedProjects] = useState<Project[]>([]);
+  
+  useEffect(() => {
+    // Reset state on slug change
+    setProject(null);
+    setRelatedProjects([]);
 
-  if (!project) {
+    const fetchData = async () => {
+      if (!slug) return;
+      
+      const foundProject = await getProjectBySlug(slug);
+      setProject(foundProject);
+
+      if (foundProject) {
+        // Fetch related projects (reusing featured for now, typically would filter by tag)
+        const allFeatured = await getFeaturedProjects();
+        setRelatedProjects(allFeatured.filter(p => p.id !== foundProject.id).slice(0, 2));
+      } else {
+        setProject(undefined);
+      }
+    };
+    fetchData();
+  }, [slug]);
+
+  if (project === null) {
+    return (
+      <div className="h-screen flex items-center justify-center text-ink/30">
+        <Loader2 className="animate-spin" size={32} />
+      </div>
+    );
+  }
+
+  if (project === undefined) {
     return (
       <div className="h-screen flex items-center justify-center text-ink">
         <h1 className="text-2xl">Project not found</h1>
@@ -21,7 +52,7 @@ const WorkDetail: React.FC = () => {
   return (
     <div className="bg-paper min-h-screen">
       {/* Hero Image */}
-      <div className="h-[60vh] md:h-[80vh] w-full relative">
+      <div className="h-[60vh] md:h-[80vh] w-full relative bg-gray-200">
         <img 
           src={project.cover_image} 
           alt={project.title} 
@@ -73,21 +104,17 @@ const WorkDetail: React.FC = () => {
 
           {/* Main Content */}
           <div className="lg:col-span-8">
-            <div className="prose prose-lg prose-headings:font-display prose-p:text-ink/80 max-w-none">
-              <h2 className="text-3xl font-bold mb-6">Overview</h2>
-              <p className="leading-relaxed mb-8">{project.content}</p>
-              
-              <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
-              
-              <div className="my-12 w-full h-96 bg-gray-200 rounded-lg overflow-hidden relative">
-                 <div className="absolute inset-0 flex items-center justify-center text-ink/30">
-                   [Video or Image Placeholder]
-                 </div>
+            <div 
+              className="prose prose-lg prose-headings:font-display prose-p:text-ink/80 max-w-none prose-img:rounded-lg"
+              dangerouslySetInnerHTML={{ __html: project.content }} 
+            />
+            
+            {/* Fallback if content is short or empty to maintain layout structure */}
+            {(!project.content || project.content.length < 100) && (
+              <div className="mt-8 text-ink/40 italic">
+                <p>Additional project details coming soon.</p>
               </div>
-
-              <h2 className="text-3xl font-bold mb-6">Process</h2>
-              <p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
-            </div>
+            )}
           </div>
         </div>
 
@@ -97,7 +124,7 @@ const WorkDetail: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
              {relatedProjects.map(p => (
                <Link key={p.id} to={`/work/${p.slug}`} className="group block">
-                 <div className="h-64 overflow-hidden rounded mb-4">
+                 <div className="h-64 overflow-hidden rounded mb-4 bg-gray-200">
                    <img src={p.cover_image} alt={p.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                  </div>
                  <h4 className="text-xl font-bold group-hover:text-cinnabar transition-colors">{p.title}</h4>
